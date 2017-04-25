@@ -29,7 +29,7 @@ def seq2seq_pad(encoder_inputs,
     ["hello", "world"] -> ["<GO>", "hi", "<EOS>"]
     ["cover", "me"] -> ["<GO>", "roger", "<EOS>"]
 
-    seq2seq_pad([['hello', 'world'], ['cover', 'me']], 4, [['<GO>', hi', '<EOS>'], ['<GO>', 'roger', '<EOS>']], 4, vocab)
+    seq2seq_pad([['hello', 'world'], ['cover', 'me']], 4, [['<GO>', hi', '<EOS>'], ['<GO>', 'roger', '<EOS>']], 5, vocab)
 
     Assume that index of "<PAD>" is 0
 
@@ -75,10 +75,10 @@ def encoder_decoder_ids_to_word_pairs(encoder_ids,
     encoder_ids = zip(*encoder_ids)
     decoder_ids = zip(*decoder_ids)
 
-    def ids_to_words(ids, reverse_vocab, remove_pad_form_start=True):
+    def ids_to_words(ids, reverse_vocab, remove_pad_from_start=True):
         words = (reverse_vocab[i] for i in ids)
         words = itertools.takewhile(lambda x: x != decoder_eos_symbol, words)
-        if remove_pad_form_start:
+        if remove_pad_from_start:
             words = itertools.dropwhile(lambda x: x == pad_symbol, words)
         return tuple(words)
 
@@ -134,9 +134,6 @@ class BucketSeq2Seq:
                                       self.embedding_dim,
                                       output_projection=None,
                                       feed_previous=do_decode)
-
-        if hasattr(self.cell, '_scope'):
-            print(self.cell._scope.name)
         return model
 
     def create_model(self, optimizer):
@@ -234,13 +231,13 @@ class BucketSeq2Seq:
 
         bucketid_to_feed_dict = dict()
         for bucket_id in buckets_with_data:
-            # pick out optimizer from the corresponding seq2seq model
             feed_dict = self._build_feed_dict(bucket_id)
             bucketid_to_feed_dict[bucket_id] = feed_dict
 
         for iteration in range(num_iteration):
             for bucket_id in buckets_with_data:
                 feed_dict = bucketid_to_feed_dict[bucket_id]
+                # pick out optimizer from the corresponding seq2seq model
                 optimizer = self.optimizers[bucket_id]
                 loss = self.losses[bucket_id]
                 _, loss_val = session.run([optimizer, loss], feed_dict)
